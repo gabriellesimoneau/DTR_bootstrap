@@ -1,6 +1,7 @@
 library(DTRreg)
 
 ################### simulated example 4.1 from "Introducing R package DTRreg" ###################
+
 set.seed(1)
 expit <- function(x){1/(1+exp(-x))}
 n <- 10000
@@ -21,6 +22,7 @@ obj=DTRreg(y,blip.mod,treat.mod,tf.mod, method="dwols",weight=weight.fun)
 summary(obj)
 
 ################### simulated example 4.2 from "Introducing R package DTRreg" ###################
+
 set.seed(1)
 n <- 10000
 x1 <- rnorm(n)
