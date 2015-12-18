@@ -110,4 +110,4 @@ models=c("Both correct","Treatment correct","TF correct","Neither correct","Both
 
 TABLE1=as.data.frame(cbind(methods,models,matrix(round(c(apply(gesti,2,mean),apply(dwols,2,mean),apply(qle,2,mean)),3),nrow=10,byrow=TRUE)))
 colnames(TABLE1)[3:6]=c("Stage 1:int","Stage 1:psi","Stage 2:int","Stage 2:psi")
-TABLE1
+print(TABLE1)
