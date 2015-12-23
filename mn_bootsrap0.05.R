@@ -99,7 +99,8 @@ for(i in sc)
     estm[[2]][s,1] <- es[2]
     
     # estimate of nonregularity
-    phat <- es[3] + O2*es[4] + A1*es[2]
+    t2 <- es[3] + O2*es[4] + A1*es[2]
+    phat <- length(t2[which(abs(t2) < 0.1)])/n # subjective threshold
     estm[[1]][s,2] <- phat
     estm[[2]][s,2] <- phat
     
