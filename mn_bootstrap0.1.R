@@ -35,6 +35,7 @@ extract <-function(out)
   int2 <- out["psi"][[1]][[2]][1]
   B.o2 <- out["psi"][[1]][[2]][2]
   return(c(psi11, psi21, int, B.o2))
+
 }
 
 ######################### m-out-of-n bootstrap : fixed alpha #############################
