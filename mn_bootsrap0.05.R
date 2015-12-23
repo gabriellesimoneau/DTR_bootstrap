@@ -39,6 +39,8 @@ extract <-function(out)
 
 ######################### m-out-of-n bootstrap : fixed alpha #############################
 
+# fixed alpha 
+alpha <- 0.05
 # scenario id
 sc <- seq(1,9)
 # number of simulated dataset
