@@ -94,7 +94,7 @@ for(i in 1:9)
     
     # fit dWOLS to the generated dataset, using all n=300 observations
     proba <- list(as.vector(rep(0.5,n)))
-    res.n <- try(DTRreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(complete)))
+    res.n <- try(dtrreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(complete)))
     es <- try(extract(res.n))
     
     # save estimates using all observations in the first column
@@ -123,7 +123,7 @@ for(i in 1:9)
       boot <- complete[index,]
       
       # fit the model to bootstrap sample
-      res <- try(DTRreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(boot)))
+      res <- try(dtrreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(boot)))
       esb <- try(extract(res))
       
       # save bootstrap estimates i in the (i+1) column

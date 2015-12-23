@@ -38,6 +38,7 @@ extract <-function(out)
 }
 
 ######################### regular n-out-of-n bootstrap #############################
+# test with only 2 scenarios
 
 # scenario id
 sc <- seq(1,9)
@@ -61,7 +62,7 @@ tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
 #                 next columns -> 1000 regular bootstrap estimates (for each simulated dataset)
 est <- vector(mode = "list", length = 2)
 
-for(i in 1:9)
+for(i in 1:2)
 {
   # reset estimates to NA for new scenario
   for(k in 1:2)
@@ -88,7 +89,7 @@ for(i in 1:9)
     complete <- cbind(A1, A2, O1, O2, Y2)
     
     # fit dWOLS to the generated dataset, using all n=300 observations
-    res.n <- try(DTRreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(complete)))
+    res.n <- try(dtrreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(complete)))
     es <- try(extract(res.n))
     
     # save estimates using all observations in the first column
@@ -103,7 +104,7 @@ for(i in 1:9)
       boot <- complete[index,]
       
       # fit the model to bootstrap sample
-      res <- try(DTRreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(boot)))
+      res <- try(dtrreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(boot)))
       esb <- try(extract(res))
       
       # save bootstrap estimates i in the (i+1) column
