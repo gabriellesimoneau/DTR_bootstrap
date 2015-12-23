@@ -37,8 +37,8 @@ extract <-function(out)
 
 ######################### regular n-out-of-n bootstrap #############################
 
-# scenario 5 -- try with scenario 5 first -- irregular
-sc <- 5
+# scenario id
+sc <- seq(1,9)
 # number of simulated dataset
 Nsimul <- 1000 
 # number of boostrap samples
@@ -52,56 +52,71 @@ proba <- list(as.vector(rep(0.5,n)))
 treat.model <- list(A1~1, A2~1) 
 tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
 
+
 # allocate space: est[[1]] -> Nsimul by Nboot+1 matrix, est[[2]] -> Nsimul by Nboot+1 matrix,
 #                 est[[1]] -> save phi_1 treatment effect stage 1, est[[2]] -> ave phi_1 treatment effect stage 2
 #                 first column of est[[1]] and est[[2]] -> estimates using all observations (for each simulated dataset)
 #                 next columns -> 1000 regular bootstrap estimates (for each simulated dataset)
 est <- vector(mode = "list", length = 2)
-for(i in 1:2)
-{
-  est[[i]] <- matrix(NA, nrow = Nsimul, ncol = 1 + Nboot)
-}
 
-for(s in 1:Nsimul)
+for(i in sc)
 {
-  # treatment A1, A2: P(Aj = 1) = P(Aj = 0) = 0.5
-  A1 <- rbinom(n, size = 1, prob = 0.5)
-  A2 <- rbinom(n, size = 1, prob = 0.5)
-  
-  # treatment A1 coded as -1,1 so I don't have to adapt the delta_1 and delta_2 parameters
-  A1.min <- 2*A1 - 1
-  
-  # covariates O1, O2: coded as -1, 1, where O2 depends on A1, O1 and (delta_1,delta_2)
-  O1 <- 2*rbinom(n, size = 1, prob = 0.5) - 1
-  O2 <- 2*rbinom(n, size = 1, prob = expit(d[sc,1]*O1 + d[sc,2]*A1.min)) - 1
-  
-  # generated outcome Y2 (Y1 set to 0), using parameters (gamma_1,...,gamma_7)
-  Y2 <- g[sc,1] + g[sc,2]*O1 + g[sc,3]*A1 + g[sc,4]*O1*A1 + g[sc,5]*A2 + g[sc,6]*O2*A2 + g[sc,7]*A1*A2 + rnorm(n)
-
-  # generated dataset
-  complete <- cbind(id,A1, A2, O1, O2, Y2)
-  
-  # fit dWOLS to the generated dataset, using all n=300 observations
-  res.n <- DTRreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(complete))
-  es <- extract(res.n)
-  
-  # save estimates using all observations in the first column
-  est[[1]][s,1] <- es[1]
-  est[[2]][s,1] <- es[2]
-  
-  # bootstrap resampling + estimate
-  for(b in 1:Nboot)
+  # reset estimates to NA for new scenario
+  for(k in 1:2)
   {
-    # resample with replacement 
-    index <- sample(1:n, n, replace = TRUE)
-    boot <- complete[index,]
-    
-    res <- DTRreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(boot))
-    esb <- extract(res)
-    
-    # save bootstrap estimates i in the (i+1) column
-    est[[1]][s, b + 1] <- esb[1]
-    est[[2]][s, b + 1] <- esb[2]
+    est[[k]] <- matrix(NA, nrow = Nsimul, ncol = 1 + Nboot)
   }
+  for(s in 1:Nsimul)
+  {
+    # treatment A1, A2: P(Aj = 1) = P(Aj = 0) = 0.5
+    A1 <- rbinom(n, size = 1, prob = 0.5)
+    A2 <- rbinom(n, size = 1, prob = 0.5)
+    
+    # treatment A1 coded as -1,1 so I don't have to adapt the delta_1 and delta_2 parameters
+    A1.min <- 2*A1 - 1
+    
+    # covariates O1, O2: coded as -1, 1, where O2 depends on A1, O1 and (delta_1,delta_2)
+    O1 <- 2*rbinom(n, size = 1, prob = 0.5) - 1
+    O2 <- 2*rbinom(n, size = 1, prob = expit(d[sc,1]*O1 + d[sc,2]*A1.min)) - 1
+    
+    # generated outcome Y2 (Y1 set to 0), using parameters (gamma_1,...,gamma_7)
+    Y2 <- g[sc,1] + g[sc,2]*O1 + g[sc,3]*A1 + g[sc,4]*O1*A1 + g[sc,5]*A2 + g[sc,6]*O2*A2 + g[sc,7]*A1*A2 + rnorm(n)
+    
+    # generated dataset
+    complete <- cbind(A1, A2, O1, O2, Y2)
+    
+    # fit dWOLS to the generated dataset, using all n=300 observations
+    res.n <- try(DTRreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(complete)))
+    es <- try(extract(res.n))
+    
+    # save estimates using all observations in the first column
+    est[[1]][s,1] <- es[1]
+    est[[2]][s,1] <- es[2]
+    
+    # bootstrap resampling + estimate
+    for(b in 1:Nboot)
+    {
+      # resample with replacement 
+      index <- sample(1:n, n, replace = TRUE)
+      boot <- complete[index,]
+      
+      # fit the model to bootstrap sample
+      res <- try(DTRreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(boot)))
+      esb <- try(extract(res))
+      
+      # save bootstrap estimates i in the (i+1) column
+      est[[1]][s, b + 1] <- esb[1]
+      est[[2]][s, b + 1] <- esb[2]
+    }
+  }
+  # linux command to save results of the simulations in a CSV file
+  name1 <- paste("nn_psi1_scenario", paste(sc[i]),".csv",sep ="")
+  name2 <- paste("nn_psi2_scenario", paste(sc[i]),".csv",sep ="")
+  
+  write.csv(est[[1]], file = name1)
+  write.csv(est[[2]], file = name2)
 }
+
+
+
 
