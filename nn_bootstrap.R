@@ -1,5 +1,7 @@
 ###################################################################################
-library(DTRreg)
+#library(DTRreg)
+source("dtrreg_fun.R")
+
 expit <- function(x) exp(x)/(1+exp(x))
 
 # gamma parameters following Chakraborty et al (2013) to control for irregularity in the generated data
@@ -59,7 +61,7 @@ tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
 #                 next columns -> 1000 regular bootstrap estimates (for each simulated dataset)
 est <- vector(mode = "list", length = 2)
 
-for(i in sc)
+for(i in 1:9)
 {
   # reset estimates to NA for new scenario
   for(k in 1:2)
@@ -77,10 +79,10 @@ for(i in sc)
     
     # covariates O1, O2: coded as -1, 1, where O2 depends on A1, O1 and (delta_1,delta_2)
     O1 <- 2*rbinom(n, size = 1, prob = 0.5) - 1
-    O2 <- 2*rbinom(n, size = 1, prob = expit(d[sc,1]*O1 + d[sc,2]*A1.min)) - 1
+    O2 <- 2*rbinom(n, size = 1, prob = expit(d[sc[i],1]*O1 + d[sc[i],2]*A1.min)) - 1
     
     # generated outcome Y2 (Y1 set to 0), using parameters (gamma_1,...,gamma_7)
-    Y2 <- g[sc,1] + g[sc,2]*O1 + g[sc,3]*A1 + g[sc,4]*O1*A1 + g[sc,5]*A2 + g[sc,6]*O2*A2 + g[sc,7]*A1*A2 + rnorm(n)
+    Y2 <- g[sc[i],1] + g[sc[i],2]*O1 + g[sc[i],3]*A1 + g[sc[i],4]*O1*A1 + g[sc[i],5]*A2 + g[sc[i],6]*O2*A2 + g[sc[i],7]*A1*A2 + rnorm(n)
     
     # generated dataset
     complete <- cbind(A1, A2, O1, O2, Y2)

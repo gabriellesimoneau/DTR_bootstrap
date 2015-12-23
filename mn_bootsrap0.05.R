@@ -1,5 +1,7 @@
 ###################################################################################
-library(DTRreg)
+#library(DTRreg)
+source("dtrreg_fun.R")
+
 expit <- function(x) exp(x)/(1+exp(x))
 
 # gamma parameters following Chakraborty et al (2013) to control for irregularity in the generated data
@@ -34,8 +36,9 @@ extract <-function(out)
   psi21 <-out["psi"][[1]][[2]][3]
   int2 <- out["psi"][[1]][[2]][1]
   B.o2 <- out["psi"][[1]][[2]][2]
-  return(c(psi11, psi21, int, B.o2))
+  return(c(psi11, psi21, int2, B.o2))
 }
+
 
 ######################### m-out-of-n bootstrap : fixed alpha #############################
 
@@ -52,7 +55,6 @@ n <- 300
 
 # model specification
 blip.model <- list(~ O1, ~ O2 + A1)
-proba <- list(as.vector(rep(0.5,n)))
 treat.model <- list(A1~1, A2~1) 
 tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
 
@@ -64,7 +66,7 @@ tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
 #                 next columns -> 1000 m-out-of n bootstrap estimates (for each simulated dataset)
 estm <- vector(mode = "list", length = 2)
 
-for(i in sc)
+for(i in 1:9)
 {
   # reset estimates to NA for new scenario
   for(k in 1:2)
@@ -82,15 +84,16 @@ for(i in sc)
     
     # covariates O1, O2: coded as -1, 1, where O2 depends on A1, O1 and (delta_1,delta_2)
     O1 <- 2*rbinom(n, size = 1, prob = 0.5) - 1
-    O2 <- 2*rbinom(n, size = 1, prob = expit(d[sc,1]*O1 + d[sc,2]*A1.min)) - 1
+    O2 <- 2*rbinom(n, size = 1, prob = expit(d[sc[i],1]*O1 + d[sc[i],2]*A1.min)) - 1
     
     # generated outcome Y2 (Y1 set to 0), using parameters (gamma_1,...,gamma_7)
-    Y2 <- g[sc,1] + g[sc,2]*O1 + g[sc,3]*A1 + g[sc,4]*O1*A1 + g[sc,5]*A2 + g[sc,6]*O2*A2 + g[sc,7]*A1*A2 + rnorm(n)
+    Y2 <- g[sc[i],1] + g[sc[i],2]*O1 + g[sc[i],3]*A1 + g[sc[i],4]*O1*A1 + g[sc[i],5]*A2 + g[sc[i],6]*O2*A2 + g[sc[i],7]*A1*A2 + rnorm(n)
     
     # generated dataset
     complete <- cbind(A1, A2, O1, O2, Y2)
     
     # fit dWOLS to the generated dataset, using all n=300 observations
+    proba <- list(as.vector(rep(0.5,n)))
     res.n <- try(DTRreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(complete)))
     es <- try(extract(res.n))
     
@@ -109,11 +112,14 @@ for(i in sc)
     estm[[1]][s,3] <- m
     estm[[2]][s,3] <- m
     
+    # probability treatment with m
+    proba <- list(as.vector(rep(0.5,floor(m))))
+    
     # bootstrap resampling + estimate
     for(b in 1:Nboot)
     {
       # resample with replacement 
-      index <- sample(1:n, m, replace = TRUE)
+      index <- sample(1:n, floor(m), replace = TRUE)
       boot <- complete[index,]
       
       # fit the model to bootstrap sample
@@ -126,8 +132,8 @@ for(i in sc)
     }
   }
   # linux command to save results of the simulations in a CSV file
-  name1 <- paste("mn_psi1_scenario", paste(sc[i]),".csv",sep ="")
-  name2 <- paste("mn_psi2_scenario", paste(sc[i]),".csv",sep ="")
+  name1 <- paste("mn0.05_psi1_scenario", paste(sc[i]),".csv",sep ="")
+  name2 <- paste("mn0.05_psi2_scenario", paste(sc[i]),".csv",sep ="")
   
   write.csv(estm[[1]], file = name1)
   write.csv(estm[[2]], file = name2)
