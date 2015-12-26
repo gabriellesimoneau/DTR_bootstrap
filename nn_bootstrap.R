@@ -62,7 +62,7 @@ tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
 #                 next columns -> 1000 regular bootstrap estimates (for each simulated dataset)
 est <- vector(mode = "list", length = 2)
 
-for(i in 1:2)
+for(i in 3:9)
 {
   # reset estimates to NA for new scenario
   for(k in 1:2)
