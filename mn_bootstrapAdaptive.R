@@ -137,7 +137,7 @@ for(i in 1:9)
       estm[j,1] <- esb1[2]
       
       # estimate m for each b1 bootstrap sample
-      t2 <- esb1[3] + boot1$O2 * esb1[4] + boot1$A1 * esb1[2]
+      t2 <- esb1[2] + boot1$O2 * esb1[3] + boot1$A1 * esb1[4]
       phat <- length(t2[which(abs(t2) < 0.1)])/n # subjective threshold
       estm[j,2] <- phat
       
@@ -160,7 +160,6 @@ for(i in 1:9)
         
         # save the (b1,b2) bootstrap estimates j in the (k+3) column
         estm[j,k + 3] <- esb2[2]
-        print(k)
       }
     }
     
@@ -175,7 +174,132 @@ for(i in 1:9)
   # return alpha for scenario
   selected.alpha[i] <- alpha
 }
-print(alpha)
+write.csv(selected.alpha, file = "alpha.csv")
+
+######################### m-out-of-n bootstrap : adaptive alpha #############################
+
+# scenario id
+sc <- seq(1,9)
+# number of simulated dataset
+Nsimul <- 1000 
+# number of boostrap samples
+Nboot <- 1000
+# sample size
+n <- 300
+
+# model specification
+blip.model <- list(~ O1, ~ O2 + A1)
+treat.model <- list(A1~1, A2~1) 
+tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
+
+# allocate space: estm[[1]] -> Nsimul by Nboot+1 matrix, estm[[2]] -> Nsimul by Nboot+1 matrix,
+#                 estm[[1]] -> save phi_1 treatment effect stage 1, estm[[2]] -> ave phi_1 treatment effect stage 2
+#                 first column of estm[[1]] and estm[[2]] -> estimates using all observations (for each simulated dataset)
+#                 second column of estm[[1]] and estm[[2]] -> estimate of nonregularity p hat
+#                 third column of estm[[1]] and estm[[2]] -> resample size b
+#                 next columns -> 1000 m-out-of n bootstrap estimates (for each simulated dataset)
+estm <- vector(mode = "list", length = 2)
+
+for(i in 1:9) # loop over scenario
+{
+  # reset estimates to NA for new scenario
+  for(k in 1:2)
+  {
+    estm[[k]] <- matrix(NA, nrow = Nsimul , ncol = Nboot + 3)
+  }
+  # selected alpha for each scenario
+  alpha <- selected.alpha[i]
+  
+  for(s in 1:Nsimul) # loop over number of simulations
+  {
+    # treatment A1, A2: P(Aj = 1) = P(Aj = 0) = 0.5
+    A1 <- rbinom(n, size = 1, prob = 0.5)
+    A2 <- rbinom(n, size = 1, prob = 0.5)
+    
+    # treatment A1 coded as -1,1 so I don't have to adapt the delta_1 and delta_2 parameters
+    A1.min <- 2*A1 - 1
+    
+    # covariates O1, O2: coded as -1, 1, where O2 depends on A1, O1 and (delta_1,delta_2)
+    O1 <- 2*rbinom(n, size = 1, prob = 0.5) - 1
+    O2 <- 2*rbinom(n, size = 1, prob = expit(d[sc[i],1]*O1 + d[sc[i],2]*A1.min)) - 1
+    
+    # generated outcome Y2 (Y1 set to 0), using parameters (gamma_1,...,gamma_7)
+    Y2 <- g[sc[i],1] + g[sc[i],2]*O1 + g[sc[i],3]*A1 + g[sc[i],4]*O1*A1 + g[sc[i],5]*A2 + g[sc[i],6]*O2*A2 + g[sc[i],7]*A1*A2 + rnorm(n)
+    
+    # generated dataset
+    complete <- cbind(A1, A2, O1, O2, Y2)
+    
+    # fit dWOLS to the generated dataset, using all n=300 observations
+    proba <- list(as.vector(rep(0.5,n)))
+    res.n <- try(dtrreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(complete)))
+    es <- try(extract(res.n))
+    
+    # save estimates using all observations in the first column
+    estm[[1]][s,1] <- es[1]
+    estm[[2]][s,1] <- es[2]
+    
+    # estimate of nonregularity
+    t2 <- es[2] + O2*es[3] + A1*es[4]
+    phat <- length(t2[which(abs(t2) < 0.1)])/n # subjective threshold
+    estm[[1]][s,2] <- phat
+    estm[[2]][s,2] <- phat
+    
+    # resampling size
+    m <- n^((1 + alpha*(1-phat))/(1 + alpha))
+    estm[[1]][s,3] <- m
+    estm[[2]][s,3] <- m
+    
+    # probability treatment with m
+    proba <- list(as.vector(rep(0.5,floor(m))))
+    
+    # bootstrap resampling + estimate
+    for(b in 1:Nboot) # loop over number of bootstrap samples
+    {
+      # resample with replacement 
+      index <- sample(1:n, floor(m), replace = TRUE)
+      boot <- complete[index,]
+      
+      # fit the model to bootstrap sample
+      res <- try(dtrreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(boot)))
+      esb <- try(extract(res))
+      
+      # save bootstrap estimates i in the (i+1) column
+      estm[[1]][s, b + 3] <- esb[1]
+      estm[[2]][s, b + 3] <- esb[2]
+    }
+  }
+  # linux command to save results of the simulations in a CSV file
+  name1 <- paste("mnad_psi1_scenario", paste(sc[i]),".csv",sep ="")
+  name2 <- paste("mnad_psi2_scenario", paste(sc[i]),".csv",sep ="")
+  
+  write.csv(estm[[1]], file = name1)
+  write.csv(estm[[2]], file = name2)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
