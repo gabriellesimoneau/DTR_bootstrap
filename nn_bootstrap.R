@@ -32,8 +32,8 @@ d[9,] <- c(0,0)
 #   and phi_2 (effect of treatment second stage) from a DTRreg mdoel fit
 extract <-function(out)
 {
-  psi11 <-out["psi"][[1]][[1]][2] 
-  psi21 <-out["psi"][[1]][[2]][3]
+  psi11 <-out["psi"][[1]][[1]][1] 
+  psi21 <-out["psi"][[1]][[2]][1]
   return(c(psi11, psi21))
 }
 
