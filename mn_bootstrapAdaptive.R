@@ -32,11 +32,11 @@ d[9,] <- c(0,0)
 #   and phi_2 (effect of treatment second stage) from a DTRreg mdoel fit
 extract <-function(out)
 {
-  psi11 <-out["psi"][[1]][[1]][2] 
-  psi21 <-out["psi"][[1]][[2]][3]
-  int2 <- out["psi"][[1]][[2]][1]
+  psi11 <-out["psi"][[1]][[1]][1] 
+  psi21 <-out["psi"][[1]][[2]][1]
   B.o2 <- out["psi"][[1]][[2]][2]
-  return(c(psi11, psi21, int2, B.o2))
+  B.a1 <- out["psi"][[1]][[2]][3]
+  return(c(psi11, psi21, B.o2, B.a1))
 }
 
 # percentile is to extract the eta-level percentiles from step 4 of double bootstrap
