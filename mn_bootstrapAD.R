@@ -1,4 +1,3 @@
-###################################################################################
 #library(DTRreg)
 source("dtrreg_fun.R")
 
@@ -34,11 +33,15 @@ extract <-function(out)
 {
   psi11 <-out["psi"][[1]][[1]][1] 
   psi21 <-out["psi"][[1]][[2]][1]
-  return(c(psi11, psi21))
+  B.o2 <- out["psi"][[1]][[2]][2]
+  B.a1 <- out["psi"][[1]][[2]][3]
+  return(c(psi11, psi21, B.o2, B.a1))
 }
 
-######################### regular n-out-of-n bootstrap #############################
+######################### m-out-of-n bootstrap : adpative alpha #############################
 
+# alpha
+alphaID <- c(0.05,0.05,0.05,0.05,0.05,0.1,0.025,0.025,0.05)
 # scenario id
 sc <- seq(1,9)
 # number of simulated dataset
@@ -50,25 +53,27 @@ n <- 300
 
 # model specification
 blip.model <- list(~ O1, ~ O2 + A1)
-proba <- list(as.vector(rep(0.5,n)))
 treat.model <- list(A1~1, A2~1) 
 tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
 
+# allocate space: estm[[1]] -> Nsimul by Nboot+1 matrix, estm[[2]] -> Nsimul by Nboot+1 matrix,
+#                 estm[[1]] -> save phi_1 treatment effect stage 1, estm[[2]] -> ave phi_1 treatment effect stage 2
+#                 first column of estm[[1]] and estm[[2]] -> estimates using all observations (for each simulated dataset)
+#                 second column of estm[[1]] and estm[[2]] -> estimate of nonregularity p hat
+#                 third column of estm[[1]] and estm[[2]] -> resample size b
+#                 next columns -> 1000 m-out-of n bootstrap estimates (for each simulated dataset)
+estm <- vector(mode = "list", length = 2)
 
-# allocate space: est[[1]] -> Nsimul by Nboot+1 matrix, est[[2]] -> Nsimul by Nboot+1 matrix,
-#                 est[[1]] -> save phi_1 treatment effect stage 1, est[[2]] -> ave phi_1 treatment effect stage 2
-#                 first column of est[[1]] and est[[2]] -> estimates using all observations (for each simulated dataset)
-#                 next columns -> 1000 regular bootstrap estimates (for each simulated dataset)
-est <- vector(mode = "list", length = 2)
-
-for(i in 1:9)
+for(i in 1:9) # loop over scenario
 {
+  alpha <- alphaID[i]
+  
   # reset estimates to NA for new scenario
   for(k in 1:2)
   {
-    est[[k]] <- matrix(NA, nrow = Nsimul, ncol = 1 + Nboot)
+    estm[[k]] <- matrix(NA, nrow = Nsimul , ncol = Nboot + 3)
   }
-  for(s in 1:Nsimul)
+  for(s in 1:Nsimul) # loop over number of simulations
   {
     # treatment A1, A2: P(Aj = 1) = P(Aj = 0) = 0.5
     A1 <- rbinom(n, size = 1, prob = 0.5)
@@ -88,18 +93,33 @@ for(i in 1:9)
     complete <- cbind(A1, A2, O1, O2, Y2)
     
     # fit dWOLS to the generated dataset, using all n=300 observations
+    proba <- list(as.vector(rep(0.5,n)))
     res.n <- try(dtrreg(outcome = Y2, blip.mod = blip.model, treat.mod = treat.model, tf.mod = tf.model, treat.mod.man = rep(proba,2), method = "dwols", data = as.data.frame(complete)))
     es <- try(extract(res.n))
     
     # save estimates using all observations in the first column
-    est[[1]][s,1] <- es[1]
-    est[[2]][s,1] <- es[2]
+    estm[[1]][s,1] <- es[1]
+    estm[[2]][s,1] <- es[2]
+    
+    # estimate of nonregularity
+    t2 <- es[2] + O2*es[3] + A1*es[4]
+    phat <- length(t2[which(abs(t2) < 0.1)])/n # subjective threshold
+    estm[[1]][s,2] <- phat
+    estm[[2]][s,2] <- phat
+    
+    # resampling size
+    m <- n^((1 + alpha*(1-phat))/(1 + alpha))
+    estm[[1]][s,3] <- m
+    estm[[2]][s,3] <- m
+    
+    # probability treatment with m
+    proba <- list(as.vector(rep(0.5,floor(m))))
     
     # bootstrap resampling + estimate
-    for(b in 1:Nboot)
+    for(b in 1:Nboot) # loop over number of bootstrap samples
     {
       # resample with replacement 
-      index <- sample(1:n, n, replace = TRUE)
+      index <- sample(1:n, floor(m), replace = TRUE)
       boot <- complete[index,]
       
       # fit the model to bootstrap sample
@@ -107,17 +127,23 @@ for(i in 1:9)
       esb <- try(extract(res))
       
       # save bootstrap estimates i in the (i+1) column
-      est[[1]][s, b + 1] <- esb[1]
-      est[[2]][s, b + 1] <- esb[2]
+      estm[[1]][s, b + 3] <- esb[1]
+      estm[[2]][s, b + 3] <- esb[2]
     }
   }
   # linux command to save results of the simulations in a CSV file
-  name1 <- paste("nn_psi1_scenario", paste(sc[i]),".csv",sep ="")
-  name2 <- paste("nn_psi2_scenario", paste(sc[i]),".csv",sep ="")
+  name1 <- paste("mnad_psi1_scenario", paste(sc[i]),".csv",sep ="")
+  name2 <- paste("mnad_psi2_scenario", paste(sc[i]),".csv",sep ="")
   
-  write.csv(est[[1]], file = name1)
-  write.csv(est[[2]], file = name2)
+  write.csv(estm[[1]], file = name1)
+  write.csv(estm[[2]], file = name2)
 }
+
+
+
+
+
+
 
 
 
