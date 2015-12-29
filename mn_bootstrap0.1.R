@@ -13,7 +13,7 @@ g[4,] <- c(0,0,-0.5,0,0.99,0,-0.98)
 g[5,] <- c(0,0,-0.5,0,1,0.5,-0.5)
 g[6,] <- c(0,0,-0.5,0,0.25,0.5,0.5)
 g[7,] <- c(0,0,-0.25,0,0.75,0.5,0.5)
-g[8,] <- c(0,0,0,0,0.25,0,0.25)
+g[8,] <- c(0,0,0,0,1,0,-1)
 g[9,] <- c(0,0,0,0,0.25,0,-0.24)
 
 # delta parameters following Chakraborty et al (2013) to control for irregularity in the generated data
@@ -131,8 +131,8 @@ for(i in 1:9) # loop over scenario
     }
   }
   # linux command to save results of the simulations in a CSV file
-  name1 <- paste("mn0.01_psi1_scenario", paste(sc[i]),".csv",sep ="")
-  name2 <- paste("mn0.01_psi2_scenario", paste(sc[i]),".csv",sep ="")
+  name1 <- paste("mn0.1_psi1_scenario", paste(sc[i]),".csv",sep ="")
+  name2 <- paste("mn0.1_psi2_scenario", paste(sc[i]),".csv",sep ="")
   
   write.csv(estm[[1]], file = name1)
   write.csv(estm[[2]], file = name2)

@@ -13,7 +13,7 @@ g[4,] <- c(0,0,-0.5,0,0.99,0,-0.98)
 g[5,] <- c(0,0,-0.5,0,1,0.5,-0.5)
 g[6,] <- c(0,0,-0.5,0,0.25,0.5,0.5)
 g[7,] <- c(0,0,-0.25,0,0.75,0.5,0.5)
-g[8,] <- c(0,0,0,0,0.25,0,0.25)
+g[8,] <- c(0,0,0,0,1,0,-1)
 g[9,] <- c(0,0,0,0,0.25,0,-0.24)
 
 # delta parameters following Chakraborty et al (2013) to control for irregularity in the generated data
@@ -51,7 +51,7 @@ n <- 300
 # model specification
 blip.model <- list(~ O1, ~ O2 + A1)
 proba <- list(as.vector(rep(0.5,n)))
-treat.model <- list(A1~1, A2~1) 
+treat.model <- list(A1 ~ 1, A2 ~ 1) 
 tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
 
 

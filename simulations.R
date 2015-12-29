@@ -33,7 +33,7 @@ g[4,] <- c(0,0,-0.5,0,0.99,0,-0.98)
 g[5,] <- c(0,0,-0.5,0,1,0.5,-0.5)
 g[6,] <- c(0,0,-0.5,0,0.25,0.5,0.5)
 g[7,] <- c(0,0,-0.25,0,0.75,0.5,0.5)
-g[8,] <- c(0,0,0,0,0.25,0,0.25)
+g[8,] <- c(0,0,0,0,1,0,-1)
 g[9,] <- c(0,0,0,0,0.25,0,-0.24)
 
 # delta parameters following Chakraborty et al (2013) to control for irregularity in the generated data
@@ -48,9 +48,13 @@ d[7,] <- c(0.1,0.1)
 d[8,] <- c(0,0)
 d[9,] <- c(0,0)
 
+# scenario
+sc <- seq(1,9)
+
 ################################### scenario 3 - nonregular ###################################
-# in scenario 3, p = measure of irregularity, should be close to 0.5
+
 n <- 300
+i <- 3
 
 # treatment A1, A2: P(Aj = 1) = P(Aj = 0) = 0.5
 A1 <- rbinom(n, size = 1, prob = 0.5)
@@ -61,16 +65,15 @@ A1.min <- 2*A1 - 1
 
 # covariates O1, O2: coded as -1, 1, where O2 depends on A1, O1 and (delta_1,delta_2)
 O1 <- 2*rbinom(n, size = 1, prob = 0.5) - 1
-O2 <- 2*rbinom(n, size = 1, prob = expit(d[3,1]*O1 + d[3,2]*A1.min)) - 1
+O2 <- 2*rbinom(n, size = 1, prob = expit(d[sc[i],1]*O1 + d[sc[i],2]*A1.min)) - 1
 
 # generated outcome Y2 (Y1 set to 0), using parameters (gamma_1,...,gamma_7)
-Y1 <- rep(0, n)
-Y2 <- g[3,1] + g[3,2]*O1 + g[3,3]*A1 + g[3,4]*O1*A1 + g[3,5]*A2 + g[3,6]*O2*A2 + g[3,7]*A1*A2 + rnorm(n)
+Y2 <- g[sc[i],1] + g[sc[i],2]*O1 + g[sc[i],3]*A1 + g[sc[i],4]*O1*A1 + g[sc[i],5]*A2 + g[sc[i],6]*O2*A2 + g[sc[i],7]*A1*A2 + rnorm(n)
 
 # model specification
 blip.model <- list(~ O1, ~ O2 + A1)
 proba <- list(as.vector(rep(0.5,n)))
-treat.model <- list(A1~1, A2~1) 
+treat.model <- list(A1 ~ 1, A2 ~ 1) 
 tf.model <- list(~ O1, ~ O1 + A1 + O1*A1)
 
 # fit dWOLS to the generated dataset, using all n=300 observations
@@ -87,11 +90,24 @@ B.a1 <- s3["psi"][[1]][[2]][3]
 psi <- int2 + O2*B.o2 + A1*B.a1
 psi
 
+# estimate of p, the probability of generating data with gamma5 + gamma6*O2 + gamma7*A1 close to zero
+#   in scenario 3, this probability should be close to 0.5
+# try different threshold to quantify "close to zero"
+#   the estimates of p varies a lot depending on the data
 length(psi[which(abs(psi) < 0.1)])/n 
 length(psi[which(abs(psi) < 0.15)])/n 
 
+# probability of generating patient history such that g5*A2 + g6*O2*A2 + g7*A1*A2 = 0
+#   this is, following the paper where A1,A2 are coded {-1,1} but this specificiation of p
+#   is not relevant when A1,A2 are coded {0,1} because p will always be 0.5
+gg <- g[sc[i],5]*A2 + g[sc[i],6]*O2*A2 + g[sc[i],7]*A1*A2
+length(which(gg==0))/n
+
+
+
 ################################### scenario 5 - nonregular ###################################
-# in scenario 5, p = measure of irregularity, should be close to 0.25
+
+i <- 5
 
 # treatment A1, A2: P(Aj = 1) = P(Aj = 0) = 0.5
 A1 <- rbinom(n, size = 1, prob = 0.5)
@@ -128,17 +144,9 @@ B.a1 <- s5["psi"][[1]][[2]][3]
 psi <- int2 + O2*B.o2 + A1*B.a1
 psi
 
+# estimate of p, the probability of generating data with gamma5 + gamma6*O2 + gamma7*A1 close to zero
+#   in scenario 5, this probability should be close to 0.25
+# try different threshold to quantify "close to zero"
+#   the estimates of p varies a lot depending on the data
 length(psi[which(abs(psi) < 0.1)])/n 
 length(psi[which(abs(psi) < 0.15)])/n 
-
-
-
-
-
-
-
-
-
-
-
-
