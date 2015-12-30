@@ -1,5 +1,6 @@
 #library(DTRreg)
 source("dtrreg_fun.R")
+source("fun_alpha.R")
 
 expit <- function(x) exp(x)/(1+exp(x))
 
@@ -37,12 +38,29 @@ extract <-function(out)
   B.a1 <- out["psi"][[1]][[2]][3]
   return(c(psi11, psi21, B.o2, B.a1))
 }
+# percentile is to extract the eta-level percentiles from step 4 of double bootstrap
+percentile <- function(x)
+{
+  phi1n <- x[1] 
+  m <- floor(x[3])
+  dis <- x[4:(B2+3)]-phi1n
+  quan <- sqrt(m) * quantile(dis, probs = c(0.025, 0.975))
+  return(quan)
+}
+# dbCI to construct the double bootstrap sample from step 4
+dbCI <- function(x)
+{
+  ph1n <- x[1]
+  m <- x[2]
+  l <- x[3]
+  u <- x[4]
+  CI <- c(ph1n - u/sqrt(m), ph1n - l/sqrt(m))
+  return(CI)
+}
 
 ######################### m-out-of-n bootstrap : adpative alpha #############################
 
-# alpha
-alphaID <- c(0.05,0.05,0.05,0.05,0.05,0.1,0.025,0.025,0.05)
-# scenario id
+
 sc <- seq(1,9)
 # number of simulated dataset
 Nsimul <- 1000 
@@ -66,12 +84,10 @@ estm <- vector(mode = "list", length = 2)
 
 for(i in 1:9) # loop over scenario
 {
-  alpha <- alphaID[i]
-  
   # reset estimates to NA for new scenario
   for(k in 1:2)
   {
-    estm[[k]] <- matrix(NA, nrow = Nsimul , ncol = Nboot + 3)
+    estm[[k]] <- matrix(NA, nrow = Nsimul , ncol = Nboot + 4)
   }
   for(s in 1:Nsimul) # loop over number of simulations
   {
@@ -107,10 +123,15 @@ for(i in 1:9) # loop over scenario
     estm[[1]][s,2] <- phat
     estm[[2]][s,2] <- phat
     
+    # choice of alpha
+    alpha <- dbalpha(data = complete, psin = es[2])
+    estm[[1]][s,3] <- alpha
+    estm[[2]][s,3] <- alpha
+    print(c(s,alpha))
     # resampling size
     m <- n^((1 + alpha*(1-phat))/(1 + alpha))
-    estm[[1]][s,3] <- m
-    estm[[2]][s,3] <- m
+    estm[[1]][s,4] <- m
+    estm[[2]][s,4] <- m
     
     # probability treatment with m
     proba <- list(as.vector(rep(0.5,floor(m))))
@@ -127,8 +148,8 @@ for(i in 1:9) # loop over scenario
       esb <- try(extract(res))
       
       # save bootstrap estimates i in the (i+1) column
-      estm[[1]][s, b + 3] <- esb[1]
-      estm[[2]][s, b + 3] <- esb[2]
+      estm[[1]][s, b + 4] <- esb[1]
+      estm[[2]][s, b + 4] <- esb[2]
     }
   }
   # linux command to save results of the simulations in a CSV file
